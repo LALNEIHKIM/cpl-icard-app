@@ -601,7 +601,7 @@
   let cardsQueue = [];
 
   window.addEventListener("DOMContentLoaded", () => {
-    fetch('http://localhost:3000/api/employees')
+    fetch('/api/employees')
       .then(res => res.json())
       .then(data => {
         employees = data;
