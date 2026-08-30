@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Excel Date to DD/MM/YYYY Formatter
+// Excel Serial Date to DD/MM/YYYY Formatter
 function formatExcelDate(value) {
   if (!value) return '';
   if (typeof value === 'number') {
@@ -22,21 +22,43 @@ function formatExcelDate(value) {
   return String(value).trim();
 }
 
-// API endpoint to fetch employees directly from Excel
+// API endpoint to fetch employees directly from Excel MASTERLIST
 app.get('/api/employees', (req, res) => {
   try {
     const filePath = path.join(__dirname, 'CPL I CARD MAKER.xlsx');
     const workbook = xlsx.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
+    
+    // MASTERLIST sheet dhoondo ya pehli sheet lo
+    const sheetName = workbook.SheetNames.find(s => s.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rawData = xlsx.utils.sheet_to_json(sheet);
 
-    // Format fields cleanly
-    const formattedData = rawData.map(emp => ({
-      ...emp,
-      DOB: formatExcelDate(emp.DOB),
-      DOE: formatExcelDate(emp.DOE)
-    }));
+    // Clean and Format Fields
+    const formattedData = rawData.map(emp => {
+      // Keys case-insensitive mapping
+      const getVal = (...keys) => {
+        for (let k of keys) {
+          const foundKey = Object.keys(emp).find(x => x.trim().toLowerCase() === k.toLowerCase());
+          if (foundKey && emp[foundKey] !== undefined) return emp[foundKey];
+        }
+        return '';
+      };
+
+      const dobVal = getVal('DOB', 'DATE OF BIRTH', 'BIRTH');
+      const doeVal = getVal('DOE', 'DATE OF ENROLMENT', 'ENROLMENT', 'DOJ');
+
+      return {
+        ...emp,
+        NAME: getVal('NAME', 'CPL NAME', 'EMPLOYEE NAME'),
+        CODE: getVal('CODE', 'CODE NO', 'CPL NO', 'REGN NO'),
+        FNAME: getVal("FATHER'S NAME", "FATHERS NAME", "FNAME", "HUSBAND NAME"),
+        DESIG: getVal('TRADE / DESIG', 'TRADE', 'DESIGNATION', 'DESIG'),
+        DOB: formatExcelDate(dobVal),
+        DOE: formatExcelDate(doeVal),
+        IDMARK: getVal('IDENTIFICATION MARK', 'ID MARK', 'MARK'),
+        RMPL: getVal('RMPL', 'RMPL NO')
+      };
+    });
 
     res.json(formattedData);
   } catch (err) {
