@@ -596,213 +596,241 @@
 </div>
 
 <script>
-  let employees = [];
-  let currentPhotoData = "";
-  let cardsQueue = [];
+let employees = [];
+let currentPhotoData = "";
+let cardsQueue = [];
 
-  window.addEventListener("DOMContentLoaded", () => {
-    fetch('/api/employees')
-      .then(res => res.json())
-      .then(data => {
-        employees = data;
-        const dl = document.getElementById("nameOptions");
-        dl.innerHTML = "";
-        employees.forEach(emp => {
-          if (emp.name) {
-            const opt = document.createElement("option");
-            opt.value = emp.name;
-            dl.appendChild(opt);
-          }
-        });
-      })
-      .catch(err => console.error("Error fetching data:", err));
+// Case-insensitive & multi-key extractor helper
+function getVal(obj, ...keys) {
+  if (!obj) return '';
+  for (let k of keys) {
+    for (let prop in obj) {
+      if (prop.trim().toLowerCase() === k.toLowerCase() && obj[prop] !== undefined && obj[prop] !== null) {
+        return String(obj[prop]).trim();
+      }
+    }
+  }
+  return '';
+}
+
+// 1. Data load and Dropdown options populate
+window.addEventListener("DOMContentLoaded", () => {
+  fetch('/api/employees')
+    .then(res => res.json())
+    .then(data => {
+      employees = data;
+      const dl = document.getElementById("nameOptions");
+      if (!dl) return;
+      dl.innerHTML = "";
+
+      employees.forEach(emp => {
+        const name = getVal(emp, 'NAME', 'CPL NAME', 'EMPLOYEE NAME');
+        if (name) {
+          const opt = document.createElement("option");
+          opt.value = name;
+          dl.appendChild(opt);
+        }
+      });
+    })
+    .catch(err => console.error("Error fetching data:", err));
+});
+
+// 2. Form Autofill Function (Name select hote hi saara data fill karega)
+function onSelectName(val) {
+  const query = val.trim().toLowerCase();
+  const match = employees.find(emp => {
+    const empName = getVal(emp, 'NAME', 'CPL NAME', 'EMPLOYEE NAME').toLowerCase();
+    return empName === query;
   });
 
-  function onSelectName(val) {
-    const match = employees.find(e => e.name && e.name.trim().toLowerCase() === val.trim().toLowerCase());
-    if (match) {
-      document.getElementById("code").value = match.code || "";
-      document.getElementById("father").value = match.father || "";
-      document.getElementById("trade").value = match.trade || "";
-      document.getElementById("dob").value = match.dob || "";
-      document.getElementById("doe").value = match.doe || "";
-      document.getElementById("idmark").value = match.idmark || "";
-    }
-    updatePreview();
-  }
+  if (match) {
+    document.getElementById("code").value = getVal(match, 'CODE', 'CODE NO', 'CPL NO');
+    document.getElementById("father").value = getVal(match, 'FNAME', "FATHER'S NAME", "FATHERS NAME", "HUSBAND NAME");
+    document.getElementById("trade").value = getVal(match, 'DESIG', 'TRADE / DESIG', 'DESIGNATION', 'TRADE');
+    document.getElementById("dob").value = getVal(match, 'DOB', 'DATE OF BIRTH');
+    document.getElementById("doe").value = getVal(match, 'DOE', 'DATE OF ENROLMENT', 'DOJ');
+    document.getElementById("idmark").value = getVal(match, 'IDMARK', 'IDENTIFICATION MARK', 'ID MARK');
 
-  function loadPhoto(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        currentPhotoData = evt.target.result;
-        updatePreview();
-      };
-      reader.readAsDataURL(file);
+    const rmplVal = getVal(match, 'RMPL', 'RMPL NO');
+    if (rmplVal) {
+      document.getElementById("rmpl").value = rmplVal;
     }
   }
+  updatePreview();
+}
 
-  function updatePreview() {
-    document.getElementById("pv-name").innerText = document.getElementById("name").value.toUpperCase();
-    document.getElementById("pv-code").innerText = document.getElementById("code").value.toUpperCase();
-    document.getElementById("pv-father").innerText = document.getElementById("father").value.toUpperCase();
-    document.getElementById("pv-trade").innerText = document.getElementById("trade").value.toUpperCase();
-    document.getElementById("pv-dob").innerText = document.getElementById("dob").value.toUpperCase();
-    document.getElementById("pv-doe").innerText = document.getElementById("doe").value;
-    document.getElementById("pv-idmark").innerText = document.getElementById("idmark").value;
-    document.getElementById("pv-rmpl").innerText = document.getElementById("rmpl").value;
-    document.getElementById("pv-valid").innerText = document.getElementById("valid").value;
-
-    const box = document.getElementById("pv-photo");
-    if (currentPhotoData) {
-      box.innerHTML = `<img src="${currentPhotoData}">`;
-    } else {
-      box.innerHTML = "UPLOAD PHOTO";
-    }
-  }
-
-  function getOrdinal(n) {
-    let s = ["th", "st", "nd", "rd"], v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  }
-
-  function addCard() {
-    const name = document.getElementById("name").value.trim();
-    if (!name) {
-      alert("Please enter Name first!");
-      return;
-    }
-
-    const card = {
-      name: name.toUpperCase(),
-      code: document.getElementById("code").value.toUpperCase(),
-      father: document.getElementById("father").value.toUpperCase(),
-      trade: document.getElementById("trade").value.toUpperCase(),
-      dob: document.getElementById("dob").value.toUpperCase(),
-      doe: document.getElementById("doe").value,
-      idmark: document.getElementById("idmark").value,
-      rmpl: document.getElementById("rmpl").value,
-      valid: document.getElementById("valid").value,
-      photo: currentPhotoData
+function loadPhoto(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      currentPhotoData = evt.target.result;
+      updatePreview();
     };
+    reader.readAsDataURL(file);
+  }
+}
 
-    cardsQueue.push(card);
-    renderQueue();
-    renderPrintGrid();
+function updatePreview() {
+  document.getElementById("pv-name").innerText = document.getElementById("name").value.toUpperCase();
+  document.getElementById("pv-code").innerText = document.getElementById("code").value.toUpperCase();
+  document.getElementById("pv-father").innerText = document.getElementById("father").value.toUpperCase();
+  document.getElementById("pv-trade").innerText = document.getElementById("trade").value.toUpperCase();
+  document.getElementById("pv-dob").innerText = document.getElementById("dob").value.toUpperCase();
+  document.getElementById("pv-doe").innerText = document.getElementById("doe").value;
+  document.getElementById("pv-idmark").innerText = document.getElementById("idmark").value;
+  document.getElementById("pv-rmpl").innerText = document.getElementById("rmpl").value;
+  document.getElementById("pv-valid").innerText = document.getElementById("valid").value;
 
-    // Reset form and live preview
-    clearForm();
+  const box = document.getElementById("pv-photo");
+  if (currentPhotoData) {
+    box.innerHTML = `<img src="${currentPhotoData}">`;
+  } else {
+    box.innerHTML = "UPLOAD PHOTO";
+  }
+}
+
+function getOrdinal(n) {
+  let s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function addCard() {
+  const name = document.getElementById("name").value.trim();
+  if (!name) {
+    alert("Please enter Name first!");
+    return;
   }
 
-  function renderQueue() {
-    const list = document.getElementById("queuedCardsList");
-    list.innerHTML = "";
-    cardsQueue.forEach((c, idx) => {
-      const item = document.createElement("div");
-      item.className = "queued-badge";
-      item.innerHTML = `
-        <span>📄 ${getOrdinal(idx + 1)} I Card (${c.name})</span>
-        <button class="btn-del-badge" onclick="deleteCard(${idx})">DELETE</button>
-      `;
-      list.appendChild(item);
-    });
-    document.getElementById("sheetCount").innerText = `📄 PRINT SHEET (${cardsQueue.length} Cards Ready for A4 Print)`;
-  }
+  const card = {
+    name: name.toUpperCase(),
+    code: document.getElementById("code").value.toUpperCase(),
+    father: document.getElementById("father").value.toUpperCase(),
+    trade: document.getElementById("trade").value.toUpperCase(),
+    dob: document.getElementById("dob").value.toUpperCase(),
+    doe: document.getElementById("doe").value,
+    idmark: document.getElementById("idmark").value,
+    rmpl: document.getElementById("rmpl").value,
+    valid: document.getElementById("valid").value,
+    photo: currentPhotoData
+  };
 
-  function deleteCard(idx) {
-    cardsQueue.splice(idx, 1);
-    renderQueue();
-    renderPrintGrid();
-  }
+  cardsQueue.push(card);
+  renderQueue();
+  renderPrintGrid();
 
-  function clearSheet() {
-    cardsQueue = [];
-    renderQueue();
-    renderPrintGrid();
-  }
+  // Reset form and live preview
+  clearForm();
+}
 
-  function renderPrintGrid() {
-    const grid = document.getElementById("printGrid");
-    grid.innerHTML = "";
+function renderQueue() {
+  const list = document.getElementById("queuedCardsList");
+  list.innerHTML = "";
+  cardsQueue.forEach((c, idx) => {
+    const item = document.createElement("div");
+    item.className = "queued-badge";
+    item.innerHTML = `
+      <span>📄 ${getOrdinal(idx + 1)} I Card (${c.name})</span>
+      <button class="btn-del-badge" onclick="deleteCard(${idx})">DELETE</button>
+    `;
+    list.appendChild(item);
+  });
+  document.getElementById("sheetCount").innerText = `📄 PRINT SHEET (${cardsQueue.length} Cards Ready for A4 Print)`;
+}
 
-    cardsQueue.forEach(c => {
-      const row = document.createElement("div");
-      row.className = "cards-row";
-      row.innerHTML = `
-        <!-- FRONT -->
-        <div class="id-card">
-          <div class="card-header">
-            <img src="logo-left.png" onerror="this.style.display='none'">
-            <div class="card-header-center">
-              <h4>HQ 74 ROAD CONSTR COMPANY (GREF)</h4>
-              <h5>CPL TEMPORARY IDENTITY CARD</h5>
-            </div>
-            <img src="logo-right.png" onerror="this.style.display='none'">
+function deleteCard(idx) {
+  cardsQueue.splice(idx, 1);
+  renderQueue();
+  renderPrintGrid();
+}
+
+function clearSheet() {
+  cardsQueue = [];
+  renderQueue();
+  renderPrintGrid();
+}
+
+function renderPrintGrid() {
+  const grid = document.getElementById("printGrid");
+  grid.innerHTML = "";
+
+  cardsQueue.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "cards-row";
+    row.innerHTML = `
+      <!-- FRONT -->
+      <div class="id-card">
+        <div class="card-header">
+          <img src="logo-left.png" onerror="this.style.display='none'">
+          <div class="card-header-center">
+            <h4>HQ 74 ROAD CONSTR COMPANY (GREF)</h4>
+            <h5>CPL TEMPORARY IDENTITY CARD</h5>
           </div>
-          <div class="card-body">
-            <table class="card-table">
-              <tr><td class="col-label">Name of CPL</td><td class="col-sep">:</td><td class="col-val">${c.name}</td></tr>
-              <tr><td class="col-label">S/o, H/o, W/o</td><td class="col-sep">:</td><td class="col-val">${c.father}</td></tr>
-              <tr><td class="col-label">Code No</td><td class="col-sep">:</td><td class="col-val">${c.code}</td></tr>
-              <tr><td class="col-label">Designation</td><td class="col-sep">:</td><td class="col-val">${c.trade}</td></tr>
-              <tr><td class="col-label">Date of Birth</td><td class="col-sep">:</td><td class="col-val">${c.dob}</td></tr>
-              <tr><td class="col-label">Date of Enrolment</td><td class="col-sep">:</td><td class="col-val">${c.doe}</td></tr>
-              <tr><td class="col-label">Identification</td><td class="col-sep">:</td><td class="col-val">${c.idmark}</td></tr>
-            </table>
-            <div class="photo-box">${c.photo ? `<img src="${c.photo}">` : 'PHOTO'}</div>
+          <img src="logo-right.png" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <table class="card-table">
+            <tr><td class="col-label">Name of CPL</td><td class="col-sep">:</td><td class="col-val">${c.name}</td></tr>
+            <tr><td class="col-label">S/o, H/o, W/o</td><td class="col-sep">:</td><td class="col-val">${c.father}</td></tr>
+            <tr><td class="col-label">Code No</td><td class="col-sep">:</td><td class="col-val">${c.code}</td></tr>
+            <tr><td class="col-label">Designation</td><td class="col-sep">:</td><td class="col-val">${c.trade}</td></tr>
+            <tr><td class="col-label">Date of Birth</td><td class="col-sep">:</td><td class="col-val">${c.dob}</td></tr>
+            <tr><td class="col-label">Date of Enrolment</td><td class="col-sep">:</td><td class="col-val">${c.doe}</td></tr>
+            <tr><td class="col-label">Identification</td><td class="col-sep">:</td><td class="col-val">${c.idmark}</td></tr>
+          </table>
+          <div class="photo-box">${c.photo ? `<img src="${c.photo}">` : 'PHOTO'}</div>
+        </div>
+        <div class="card-footer">
+          <span>Sig/Thump's .........................</span>
+          <span style="font-size:7px; color:#555;">ROUND SEAL</span>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div class="id-card">
+        <div class="card-header">
+          <img src="logo-left.png" onerror="this.style.display='none'">
+          <div class="card-header-center">
+            <h4>HQ 24 BRTF / PROJECT PUSHPAK</h4>
           </div>
+          <img src="logo-right.png" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <table class="back-table">
+            <tr><td class="back-lbl">RMPL</td><td class="col-sep">:</td><td class="back-val">${c.rmpl}</td></tr>
+            <tr><td class="back-lbl">UNIT</td><td class="col-sep">:</td><td class="back-val">74 RCC (GREF)</td></tr>
+            <tr><td class="back-lbl">DISTRICT</td><td class="col-sep">:</td><td class="back-val">CHAMPHAI</td></tr>
+            <tr><td class="back-lbl">NEAREST POLICE STATION</td><td class="col-sep">:</td><td class="back-val">Champhai PS</td></tr>
+            <tr><td class="back-lbl">NEAREST RLY STN</td><td class="col-sep">:</td><td class="back-val">SAIRANG</td></tr>
+            <tr><td class="back-lbl">STATE</td><td class="col-sep">:</td><td class="back-val">MIZORAM</td></tr>
+            <tr><td class="back-lbl">PIN NO.</td><td class="col-sep">:</td><td class="back-val">796321</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="valid-red">Valid up to : <span>${c.valid}</span></div>
           <div class="card-footer">
-            <span>Sig/Thump's .........................</span>
-            <span style="font-size:7px; color:#555;">ROUND SEAL</span>
+            <span></span>
+            <span class="officer-sig">SIG OF ISSUING OFFICER</span>
           </div>
         </div>
+      </div>
+    `;
+    grid.appendChild(row);
+  });
+}
 
-        <!-- BACK -->
-        <div class="id-card">
-          <div class="card-header">
-            <img src="logo-left.png" onerror="this.style.display='none'">
-            <div class="card-header-center">
-              <h4>HQ 24 BRTF / PROJECT PUSHPAK</h4>
-            </div>
-            <img src="logo-right.png" onerror="this.style.display='none'">
-          </div>
-          <div class="card-body">
-            <table class="back-table">
-              <tr><td class="back-lbl">RMPL</td><td class="col-sep">:</td><td class="back-val">${c.rmpl}</td></tr>
-              <tr><td class="back-lbl">UNIT</td><td class="col-sep">:</td><td class="back-val">74 RCC (GREF)</td></tr>
-              <tr><td class="back-lbl">DISTRICT</td><td class="col-sep">:</td><td class="back-val">CHAMPHAI</td></tr>
-              <tr><td class="back-lbl">NEAREST POLICE STATION</td><td class="col-sep">:</td><td class="back-val">Champhai PS</td></tr>
-              <tr><td class="back-lbl">NEAREST RLY STN</td><td class="col-sep">:</td><td class="back-val">SAIRANG</td></tr>
-              <tr><td class="back-lbl">STATE</td><td class="col-sep">:</td><td class="back-val">MIZORAM</td></tr>
-              <tr><td class="back-lbl">PIN NO.</td><td class="col-sep">:</td><td class="back-val">796321</td></tr>
-            </table>
-          </div>
-          <div>
-            <div class="valid-red">Valid up to : <span>${c.valid}</span></div>
-            <div class="card-footer">
-              <span></span>
-              <span class="officer-sig">SIG OF ISSUING OFFICER</span>
-            </div>
-          </div>
-        </div>
-      `;
-      grid.appendChild(row);
-    });
-  }
-
-  function clearForm() {
-    document.getElementById("name").value = "";
-    document.getElementById("code").value = "";
-    document.getElementById("father").value = "";
-    document.getElementById("trade").value = "";
-    document.getElementById("dob").value = "";
-    document.getElementById("doe").value = "";
-    document.getElementById("idmark").value = "";
-    document.getElementById("photo").value = "";
-    currentPhotoData = "";
-    updatePreview();
-  }
+function clearForm() {
+  document.getElementById("name").value = "";
+  document.getElementById("code").value = "";
+  document.getElementById("father").value = "";
+  document.getElementById("trade").value = "";
+  document.getElementById("dob").value = "";
+  document.getElementById("doe").value = "";
+  document.getElementById("idmark").value = "";
+  document.getElementById("photo").value = "";
+  currentPhotoData = "";
+  updatePreview();
+}
 </script>
 
 </body>
