@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Excel Serial Date to DD/MM/YYYY Formatter
+// Date Formatter (Handles Excel Serial & Text Dates)
 function formatExcelDate(value) {
   if (!value) return '';
   if (typeof value === 'number') {
@@ -22,43 +22,59 @@ function formatExcelDate(value) {
   return String(value).trim();
 }
 
-// API endpoint to fetch employees directly from Excel MASTERLIST
 app.get('/api/employees', (req, res) => {
   try {
     const filePath = path.join(__dirname, 'CPL I CARD MAKER.xlsx');
     const workbook = xlsx.readFile(filePath);
-    
-    // MASTERLIST sheet dhoondo ya pehli sheet lo
-    const sheetName = workbook.SheetNames.find(s => s.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+
+    // Dhoondo wo sheet jisme actual employee list ho
+    let targetSheetName = workbook.SheetNames.find(name => 
+      name.toUpperCase().includes('MASTER') || 
+      name.toUpperCase().includes('DATA') || 
+      name.toUpperCase().includes('CPL') ||
+      name.toUpperCase().includes('CARD')
+    );
+
+    // Agar na mile toh sabse badi sheet uthao
+    if (!targetSheetName) {
+      let maxRows = 0;
+      workbook.SheetNames.forEach(name => {
+        const sheet = workbook.Sheets[name];
+        const rows = xlsx.utils.sheet_to_json(sheet);
+        if (rows.length > maxRows) {
+          maxRows = rows.length;
+          targetSheetName = name;
+        }
+      });
+    }
+
+    const sheet = workbook.Sheets[targetSheetName || workbook.SheetNames[0]];
     const rawData = xlsx.utils.sheet_to_json(sheet);
 
-    // Clean and Format Fields
+    // Universal Property Matcher
     const formattedData = rawData.map(emp => {
-      // Keys case-insensitive mapping
       const getVal = (...keys) => {
         for (let k of keys) {
-          const foundKey = Object.keys(emp).find(x => x.trim().toLowerCase() === k.toLowerCase());
-          if (foundKey && emp[foundKey] !== undefined) return emp[foundKey];
+          for (let prop in emp) {
+            if (prop.trim().toLowerCase() === k.toLowerCase() && emp[prop] !== undefined && emp[prop] !== null) {
+              return String(emp[prop]).trim();
+            }
+          }
         }
         return '';
       };
 
-      const dobVal = getVal('DOB', 'DATE OF BIRTH', 'BIRTH');
-      const doeVal = getVal('DOE', 'DATE OF ENROLMENT', 'ENROLMENT', 'DOJ');
+      const name = getVal('NAME', 'CPL NAME', 'NAME OF CPL', 'EMPLOYEE NAME', 'NAME OF EMPLOYEE');
+      const code = getVal('CODE', 'CODE NO', 'CPL NO', 'REGN NO', 'REG NO', 'REGISTRATION NO');
+      const father = getVal('FATHER', "FATHER'S NAME", "FATHERS NAME", "S/O", "HUSBAND NAME", "FNAME");
+      const trade = getVal('TRADE', 'TRADE / DESIG', 'DESIGNATION', 'DESIG', 'TRADE/DESIG');
+      const dob = formatExcelDate(getVal('DOB', 'DATE OF BIRTH', 'BIRTH'));
+      const doe = formatExcelDate(getVal('DOE', 'DATE OF ENROLMENT', 'ENROLMENT', 'DOJ', 'DATE OF ENGAGEMENT'));
+      const idmark = getVal('IDMARK', 'IDENTIFICATION MARK', 'IDENTIFICATION', 'ID MARK');
+      const rmpl = getVal('RMPL', 'RMPL NO') || '403';
 
-      return {
-        ...emp,
-        NAME: getVal('NAME', 'CPL NAME', 'EMPLOYEE NAME'),
-        CODE: getVal('CODE', 'CODE NO', 'CPL NO', 'REGN NO'),
-        FNAME: getVal("FATHER'S NAME", "FATHERS NAME", "FNAME", "HUSBAND NAME"),
-        DESIG: getVal('TRADE / DESIG', 'TRADE', 'DESIGNATION', 'DESIG'),
-        DOB: formatExcelDate(dobVal),
-        DOE: formatExcelDate(doeVal),
-        IDMARK: getVal('IDENTIFICATION MARK', 'ID MARK', 'MARK'),
-        RMPL: getVal('RMPL', 'RMPL NO')
-      };
-    });
+      return { name, code, father, trade, dob, doe, idmark, rmpl };
+    }).filter(emp => emp.name !== ''); // Khali rows filter out
 
     res.json(formattedData);
   } catch (err) {
