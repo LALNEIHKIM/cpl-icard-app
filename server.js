@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Date Formatter (Handles Excel Serial & Text Dates)
+// Date Formatter (Handles Excel Serial & Text Dates like 19-04-1987 or 21-Nov-25)
 function formatExcelDate(value) {
   if (!value) return '';
   if (typeof value === 'number') {
@@ -27,54 +27,43 @@ app.get('/api/employees', (req, res) => {
     const filePath = path.join(__dirname, 'CPL I CARD MAKER.xlsx');
     const workbook = xlsx.readFile(filePath);
 
-    // Dhoondo wo sheet jisme actual employee list ho
-    let targetSheetName = workbook.SheetNames.find(name => 
-      name.toUpperCase().includes('MASTER') || 
-      name.toUpperCase().includes('DATA') || 
-      name.toUpperCase().includes('CPL') ||
-      name.toUpperCase().includes('CARD')
-    );
+    // MASTERLIST sheet select karein
+    const sheetName = workbook.SheetNames.find(s => s.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rawData = xlsx.utils.sheet_to_json(sheet, { defval: '' });
 
-    // Agar na mile toh sabse badi sheet uthao
-    if (!targetSheetName) {
-      let maxRows = 0;
-      workbook.SheetNames.forEach(name => {
-        const sheet = workbook.Sheets[name];
-        const rows = xlsx.utils.sheet_to_json(sheet);
-        if (rows.length > maxRows) {
-          maxRows = rows.length;
-          targetSheetName = name;
-        }
-      });
-    }
-
-    const sheet = workbook.Sheets[targetSheetName || workbook.SheetNames[0]];
-    const rawData = xlsx.utils.sheet_to_json(sheet);
-
-    // Universal Property Matcher
-    const formattedData = rawData.map(emp => {
+    const formattedData = rawData.map(row => {
+      // Keys matching helper
       const getVal = (...keys) => {
         for (let k of keys) {
-          for (let prop in emp) {
-            if (prop.trim().toLowerCase() === k.toLowerCase() && emp[prop] !== undefined && emp[prop] !== null) {
-              return String(emp[prop]).trim();
+          for (let prop in row) {
+            const cleanProp = prop.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (cleanProp.includes(k.toLowerCase()) && row[prop] !== '') {
+              return String(row[prop]).trim();
             }
           }
         }
         return '';
       };
 
-      const name = getVal('NAME', 'CPL NAME', 'NAME OF CPL', 'EMPLOYEE NAME', 'NAME OF EMPLOYEE');
-      const code = getVal('CODE', 'CODE NO', 'CPL NO', 'REGN NO', 'REG NO', 'REGISTRATION NO');
-      const father = getVal('FATHER', "FATHER'S NAME", "FATHERS NAME", "S/O", "HUSBAND NAME", "FNAME");
-      const trade = getVal('TRADE', 'TRADE / DESIG', 'DESIGNATION', 'DESIG', 'TRADE/DESIG');
-      const dob = formatExcelDate(getVal('DOB', 'DATE OF BIRTH', 'BIRTH'));
-      const doe = formatExcelDate(getVal('DOE', 'DATE OF ENROLMENT', 'ENROLMENT', 'DOJ', 'DATE OF ENGAGEMENT'));
-      const idmark = getVal('IDMARK', 'IDENTIFICATION MARK', 'IDENTIFICATION', 'ID MARK');
-      const rmpl = getVal('RMPL', 'RMPL NO') || '403';
+      const name = getVal('name');
+      const code = getVal('code');
+      const trade = getVal('trade');
+      const father = getVal('father', "s/o", 'husband');
+      const dob = formatExcelDate(getVal('birth', 'dob'));
+      const doe = formatExcelDate(getVal('enrolment', 'doe', 'enrol'));
 
-      return { name, code, father, trade, dob, doe, idmark, rmpl };
-    }).filter(emp => emp.name !== ''); // Khali rows filter out
+      return {
+        name,
+        code,
+        trade,
+        father,
+        dob,
+        doe,
+        idmark: '',
+        rmpl: '403'
+      };
+    }).filter(emp => emp.name !== '' && isNaN(emp.name));
 
     res.json(formattedData);
   } catch (err) {
