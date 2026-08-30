@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPL I-Card Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+   body {
+  background-image: url('bg.jpg');
+  background-size: 100% 100%; /* Pura screen cover karega bina crop huye */
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  padding: 12px;
+}
+
+    .workspace {
+      display: flex;
+      gap: 250px;
+      align-items: flex-start;
+    }
+
+    /* LEFT FORM PANEL */
+    .form-box {
+      width: 360px;
+      min-width: 360px;
+      background: #ffffff;
+      border: 1.5px solid #007bff;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .form-header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .form-header h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #3100f7dc;
+    }
+    .form-header p {
+      font-size: 20px;
+      font-weight: bold;
+      color: rgb(248, 39, 39);
+    }
+
+    .form-group {
+      margin-bottom: 6px;
+    }
+    .form-row {
+      display: flex;
+      gap: 6px;
+    }
+    .form-row .form-group {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      font-size: 9.5px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 2px;
+    }
+
+    input, select {
+      width: 100%;
+      height: 26px;
+      padding: 2px 6px;
+      font-size: 11px;
+      border: 1px solid #007bff;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    .btn-clear {
+      width: 100%;
+      height: 30px;
+      background: #495057;
+      color: white;
+      font-weight: bold;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .btn-add {
+      width: 100%;
+      height: 32px;
+      background: #007bff;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    /* QUEUED CARDS UNDER FORM */
+    .queued-container {
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px dashed #adb5bd;
+    }
+    .queued-header {
+      font-size: 10.5px;
+      font-weight: bold;
+      color: #495057;
+      margin-bottom: 5px;
+    }
+    .queued-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .queued-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-weight: bold;
+    }
+    .btn-del-badge {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 2px 6px;
+      font-size: 9px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* RIGHT CONTAINER */
+    .cards-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* RED BLINKING PREVIEW TITLE */
+    .section-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #dc3545;
+      animation: blinkRed 1.2s infinite;
+    }
+
+    @keyframes blinkRed {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .cards-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* EXACT CARD SIZE */
+    .id-card {
+      width: 360px;
+      height: 235px;
+      max-width: 385px;
+      max-height: 235px;
+      background: #fff;
+      border: 1.5px solid #000;
+      padding: 6px 8px;
+      box-sizing: border-box;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* LOGO SIZING */
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.2px solid #000;
+      padding-bottom: 3px;
+      height: 38px;
+    }
+    .card-header img {
+      width: 32px !important;
+      height: 32px !important;
+      max-width: 32px !important;
+      max-height: 32px !important;
+      object-fit: contain;
+      display: block;
+    }
+    .card-header-center {
+      text-align: center;
+      flex: 1;
+      padding: 0 4px;
+    }
+    .card-header-center h4 {
+      font-size: 12px;
+      font-weight: 900;
+      color: #0448f3;
+      text-decoration: underline;
+      line-height: 1.1;
+    }
+    .card-header-center h5 {
+      font-size: 12px;
+      font-weight: 900;
+      color: rgb(234, 4, 4);
+      text-decoration: underline;
+      margin-top: 1px;
+    }
+
+    /* CARD BODY & TABLE TIGHT SPACING */
+    .card-body {
+      display: flex;
+      margin-top: 4px;
+      gap: 4px;
+      align-items: flex-start;
+    }
+
+    .card-table {
+      flex: 1;
+      border-collapse: collapse;
+      font-size: 9px;
+      line-height: 1.1;
+    }
+    .card-table tr {
+      height: 15px;
+    }
+    .card-table td {
+      padding: 0;
+      vertical-align: middle;
+    }
+    .col-label {
+      width: 95px;
+      font-weight: 700;
+      color: #000;
+      white-space: nowrap;
+    }
+    .col-sep {
+      width: 10px;
+      text-align: center;
+      font-weight: 700;
+    }
+    .col-val {
+      font-weight: 900;
+      color: #000;
+    }
+
+    /* Photo Frame Size Bada Karne Ke Liye */
+.photo-box {
+  width: 75px !important;       /* Pehle 62px tha -> 75px kiya */
+  height: 110px !important;      /* Pehle 75px tha -> 92px kiya */
+  min-width: 90px !important;
+  border: 1px dashed #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: #555;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.photo-box img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+    /* FOOTER POSITION (THODA UPAR SHIFTED) */
+    .card-footer {
+      position: absolute;
+      bottom: 10px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 7.5px;
+      font-weight: bold;
+    }
+
+    .officer-sig {
+      margin-right: 200px !important; /* Right edge se 35px left */
+    }
+
+    /* BACK CARD */
+    .back-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9px;
+      line-height: 1.15;
+      margin-top: 2px;
+    }
+    .back-table tr {
+      height: 17px;
+    }
+    .back-table td {
+      padding: 0;
+      vertical-align: middle;
+    }
+    .back-lbl {
+      width: 130px;
+      font-weight: 700;
+    }
+    .back-val {
+      font-style: italic;
+      font-weight: 900;
+    }
+    .valid-red {
+  position: absolute;
+  bottom: 24px;
+  right: 35px !important; /* Right edge se 35px left */
+  color: #d90429;
+  font-size: 8px;
+  font-weight: 900;
+  text-align: right;
+}
+
+    /* PRINT SHEET BOX */
+    .sheet-box {
+      background: #fff;
+      border: 1px dashed #007bff;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .sheet-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .sheet-title {
+      font-size: 11.5px;
+      font-weight: bold;
+      color: #0b2e8a;
+    }
+    .btn-sheet-print {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 10.5px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-sheet-clear {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 10.5px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .print-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* PRINT SETTINGS (Top Gap & Center Fix) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0; /* Browser ka default zero karke custom padding denge */
+  }
+
+  body {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print, .form-box, #livePreviewArea, .sheet-bar {
+    display: none !important;
+  }
+
+  .sheet-box {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #printGrid, #printGrid * {
+    visibility: visible;
+  }
+
+  #printGrid {
+    position: absolute;
+    top: 40px !important; /* TOP SE 40px (1.5 cm) KA GAP */
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Horizontally center */
+    justify-content: flex-start;
+    gap: 20px;
+  }
+
+  .cards-row {
+    display: flex;
+    justify-content: center; /* Cards ko beech me align karega */
+    gap: 15px;
+    page-break-inside: avoid;
+    margin-bottom: 15px;
+  }
+
+  .id-card {
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+}
+  </style>
+</head>
+<body>
+
+<div class="workspace">
+
+  <!-- FORM PANEL -->
+  <div class="form-box no-print">
+    <div class="form-header">
+      <h3>CPL I CARD MAKER</h3>
+      <p>HQ 74 RCC (GREF)</p>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex: 2;">
+        <label>NAME</label>
+        <input type="text" id="name" list="nameOptions" placeholder="Type / Select Name" oninput="onSelectName(this.value)">
+        <datalist id="nameOptions"></datalist>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label>CODE</label>
+        <input type="text" id="code" placeholder="Code" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>FATHER'S / HUSBAND'S NAME</label>
+      <input type="text" id="father" placeholder="Father's Name" oninput="updatePreview()">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>TRADE / DESIG</label>
+        <input type="text" id="trade" placeholder="Designation" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>DATE OF BIRTH</label>
+        <input type="text" id="dob" placeholder="DD/MM/YYYY" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>DATE OF ENROLMENT</label>
+        <input type="text" id="doe" placeholder="Date of Enrolment" oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <label>VALID UP TO</label>
+        <input type="text" id="valid" value="28/02/2027" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div class="form-group">
+  <label>IDENTIFICATION MARK</label>
+  <textarea id="idmark" placeholder="e.g. Mole on forehead" style="width: 100%; height: 42px; padding: 4px 6px; font-size: 11px; border: 1px solid #007bff; border-radius: 4px; outline: none; resize: none;" oninput="updatePreview()"></textarea>
+</div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex: 1;">
+        <label>RMPL</label>
+        <input type="text" id="rmpl" value="403" oninput="updatePreview()">
+      </div>
+      <div class="form-group" style="flex: 1.5;">
+        <label>PHOTO</label>
+        <input type="file" id="photo" accept="image/*" onchange="loadPhoto(event)">
+      </div>
+    </div>
+
+    <button type="button" class="btn-clear" onclick="clearForm()">CLEAR</button>
+    <button type="button" class="btn-add" onclick="addCard()">➕ ADD TO PRINT SHEET</button>
+
+    <div class="queued-container">
+      <div class="queued-header">QUEUED CARDS:</div>
+      <div class="queued-list" id="queuedCardsList"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PREVIEWS -->
+  <div class="cards-container">
+    
+    <div id="livePreviewArea">
+      <div class="section-title">🔴 LIVE PREVIEW (CURRENT CARD):</div>
+      <div class="cards-row" style="margin-top: 6px;">
+
+        <!-- FRONT PREVIEW -->
+        <div class="id-card">
+          <div class="card-header">
+            <img src="logo-left.png" onerror="this.style.display='none'">
+            <div class="card-header-center">
+              <h4>HQ 74 ROAD CONSTR COMPANY (GREF)</h4>
+              <h5>CPL TEMPORARY IDENTITY CARD</h5>
+            </div>
+            <img src="logo-right.png" onerror="this.style.display='none'">
+          </div>
+          <div class="card-body">
+            <table class="card-table">
+              <tr><td class="col-label">Name of CPL</td><td class="col-sep">:</td><td class="col-val" id="pv-name"></td></tr>
+              <tr><td class="col-label">S/o, H/o, W/o</td><td class="col-sep">:</td><td class="col-val" id="pv-father"></td></tr>
+              <tr><td class="col-label">Code No</td><td class="col-sep">:</td><td class="col-val" id="pv-code"></td></tr>
+              <tr><td class="col-label">Designation</td><td class="col-sep">:</td><td class="col-val" id="pv-trade"></td></tr>
+              <tr><td class="col-label">Date of Birth</td><td class="col-sep">:</td><td class="col-val" id="pv-dob"></td></tr>
+              <tr><td class="col-label">Date of Enrolment</td><td class="col-sep">:</td><td class="col-val" id="pv-doe"></td></tr>
+              <tr><td class="col-label">Identification</td><td class="col-sep">:</td><td class="col-val" id="pv-idmark"></td></tr>
+            </table>
+            <div class="photo-box" id="pv-photo">UPLOAD PHOTO</div>
+          </div>
+          <div class="card-footer">
+            <span>Sig/Thump's .........................</span>
+            <span style="font-size:10px; color:#555;">ROUND SEAL</span>
+          </div>
+        </div>
+
+        <!-- BACK PREVIEW -->
+        <div class="id-card">
+          <div class="card-header">
+            <img src="logo-left.png" onerror="this.style.display='none'">
+            <div class="card-header-center">
+              <h4>HQ 24 BRTF / PROJECT PUSHPAK</h4>
+            </div>
+            <img src="logo-right.png" onerror="this.style.display='none'">
+          </div>
+          <div class="card-body">
+            <table class="back-table">
+              <tr><td class="back-lbl">RMPL</td><td class="col-sep">:</td><td class="back-val" id="pv-rmpl">403</td></tr>
+              <tr><td class="back-lbl">UNIT</td><td class="col-sep">:</td><td class="back-val">74 RCC (GREF)</td></tr>
+              <tr><td class="back-lbl">DISTRICT</td><td class="col-sep">:</td><td class="back-val">CHAMPHAI</td></tr>
+              <tr><td class="back-lbl">NEAREST POLICE STATION</td><td class="col-sep">:</td><td class="back-val">Champhai PS</td></tr>
+              <tr><td class="back-lbl">NEAREST RLY STN</td><td class="col-sep">:</td><td class="back-val">SAIRANG</td></tr>
+              <tr><td class="back-lbl">STATE</td><td class="col-sep">:</td><td class="back-val">MIZORAM</td></tr>
+              <tr><td class="back-lbl">PIN NO.</td><td class="col-sep">:</td><td class="back-val">796321</td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="valid-red">Valid up to : <span id="pv-valid">28/02/2027</span></div>
+            <div class="card-footer">
+              <span></span>
+              <span class="officer-sig">SIG OF ISSUING OFFICER</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PRINT SHEET -->
+    <div class="sheet-box">
+      <div class="sheet-bar no-print">
+        <div class="sheet-title" id="sheetCount">📄 PRINT SHEET (0 Cards Ready for A4 Print)</div>
+        <div>
+          <button class="btn-sheet-print" onclick="window.print()">🖨️ PRINT SHEET</button>
+          <button class="btn-sheet-clear" onclick="clearSheet()">🗑️ CLEAR SHEET</button>
+        </div>
+      </div>
+
+      <div class="print-grid" id="printGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let employees = [];
+  let currentPhotoData = "";
+  let cardsQueue = [];
+
+  window.addEventListener("DOMContentLoaded", () => {
+    fetch('/api/employees')
+      .then(res => res.json())
+      .then(data => {
+        employees = data;
+        const dl = document.getElementById("nameOptions");
+        dl.innerHTML = "";
+        employees.forEach(emp => {
+          if (emp.name) {
+            const opt = document.createElement("option");
+            opt.value = emp.name;
+            dl.appendChild(opt);
+          }
+        });
+      })
+      .catch(err => console.error("Error fetching data:", err));
+  });
+
+  function onSelectName(val) {
+    const match = employees.find(e => e.name && e.name.trim().toLowerCase() === val.trim().toLowerCase());
+    if (match) {
+      document.getElementById("code").value = match.code || "";
+      document.getElementById("father").value = match.father || "";
+      document.getElementById("trade").value = match.trade || "";
+      document.getElementById("dob").value = match.dob || "";
+      document.getElementById("doe").value = match.doe || "";
+      document.getElementById("idmark").value = match.idmark || "";
+    }
+    updatePreview();
+  }
+
+  function loadPhoto(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        currentPhotoData = evt.target.result;
+        updatePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function updatePreview() {
+    document.getElementById("pv-name").innerText = document.getElementById("name").value.toUpperCase();
+    document.getElementById("pv-code").innerText = document.getElementById("code").value.toUpperCase();
+    document.getElementById("pv-father").innerText = document.getElementById("father").value.toUpperCase();
+    document.getElementById("pv-trade").innerText = document.getElementById("trade").value.toUpperCase();
+    document.getElementById("pv-dob").innerText = document.getElementById("dob").value.toUpperCase();
+    document.getElementById("pv-doe").innerText = document.getElementById("doe").value;
+    document.getElementById("pv-idmark").innerText = document.getElementById("idmark").value;
+    document.getElementById("pv-rmpl").innerText = document.getElementById("rmpl").value;
+    document.getElementById("pv-valid").innerText = document.getElementById("valid").value;
+
+    const box = document.getElementById("pv-photo");
+    if (currentPhotoData) {
+      box.innerHTML = `<img src="${currentPhotoData}">`;
+    } else {
+      box.innerHTML = "UPLOAD PHOTO";
+    }
+  }
+
+  function getOrdinal(n) {
+    let s = ["th", "st", "nd", "rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function addCard() {
+    const name = document.getElementById("name").value.trim();
+    if (!name) {
+      alert("Please enter Name first!");
+      return;
+    }
+
+    const card = {
+      name: name.toUpperCase(),
+      code: document.getElementById("code").value.toUpperCase(),
+      father: document.getElementById("father").value.toUpperCase(),
+      trade: document.getElementById("trade").value.toUpperCase(),
+      dob: document.getElementById("dob").value.toUpperCase(),
+      doe: document.getElementById("doe").value,
+      idmark: document.getElementById("idmark").value,
+      rmpl: document.getElementById("rmpl").value,
+      valid: document.getElementById("valid").value,
+      photo: currentPhotoData
+    };
+
+    cardsQueue.push(card);
+    renderQueue();
+    renderPrintGrid();
+
+    // Reset form and live preview
+    clearForm();
+  }
+
+  function renderQueue() {
+    const list = document.getElementById("queuedCardsList");
+    list.innerHTML = "";
+    cardsQueue.forEach((c, idx) => {
+      const item = document.createElement("div");
+      item.className = "queued-badge";
+      item.innerHTML = `
+        <span>📄 ${getOrdinal(idx + 1)} I Card (${c.name})</span>
+        <button class="btn-del-badge" onclick="deleteCard(${idx})">DELETE</button>
+      `;
+      list.appendChild(item);
+    });
+    document.getElementById("sheetCount").innerText = `📄 PRINT SHEET (${cardsQueue.length} Cards Ready for A4 Print)`;
+  }
+
+  function deleteCard(idx) {
+    cardsQueue.splice(idx, 1);
+    renderQueue();
+    renderPrintGrid();
+  }
+
+  function clearSheet() {
+    cardsQueue = [];
+    renderQueue();
+    renderPrintGrid();
+  }
+
+  function renderPrintGrid() {
+    const grid = document.getElementById("printGrid");
+    grid.innerHTML = "";
+
+    cardsQueue.forEach(c => {
+      const row = document.createElement("div");
+      row.className = "cards-row";
+      row.innerHTML = `
+        <!-- FRONT -->
+        <div class="id-card">
+          <div class="card-header">
+            <img src="logo-left.png" onerror="this.style.display='none'">
+            <div class="card-header-center">
+              <h4>HQ 74 ROAD CONSTR COMPANY (GREF)</h4>
+              <h5>CPL TEMPORARY IDENTITY CARD</h5>
+            </div>
+            <img src="logo-right.png" onerror="this.style.display='none'">
+          </div>
+          <div class="card-body">
+            <table class="card-table">
+              <tr><td class="col-label">Name of CPL</td><td class="col-sep">:</td><td class="col-val">${c.name}</td></tr>
+              <tr><td class="col-label">S/o, H/o, W/o</td><td class="col-sep">:</td><td class="col-val">${c.father}</td></tr>
+              <tr><td class="col-label">Code No</td><td class="col-sep">:</td><td class="col-val">${c.code}</td></tr>
+              <tr><td class="col-label">Designation</td><td class="col-sep">:</td><td class="col-val">${c.trade}</td></tr>
+              <tr><td class="col-label">Date of Birth</td><td class="col-sep">:</td><td class="col-val">${c.dob}</td></tr>
+              <tr><td class="col-label">Date of Enrolment</td><td class="col-sep">:</td><td class="col-val">${c.doe}</td></tr>
+              <tr><td class="col-label">Identification</td><td class="col-sep">:</td><td class="col-val">${c.idmark}</td></tr>
+            </table>
+            <div class="photo-box">${c.photo ? `<img src="${c.photo}">` : 'PHOTO'}</div>
+          </div>
+          <div class="card-footer">
+            <span>Sig/Thump's .........................</span>
+            <span style="font-size:7px; color:#555;">ROUND SEAL</span>
+          </div>
+        </div>
+
+        <!-- BACK -->
+        <div class="id-card">
+          <div class="card-header">
+            <img src="logo-left.png" onerror="this.style.display='none'">
+            <div class="card-header-center">
+              <h4>HQ 24 BRTF / PROJECT PUSHPAK</h4>
+            </div>
+            <img src="logo-right.png" onerror="this.style.display='none'">
+          </div>
+          <div class="card-body">
+            <table class="back-table">
+              <tr><td class="back-lbl">RMPL</td><td class="col-sep">:</td><td class="back-val">${c.rmpl}</td></tr>
+              <tr><td class="back-lbl">UNIT</td><td class="col-sep">:</td><td class="back-val">74 RCC (GREF)</td></tr>
+              <tr><td class="back-lbl">DISTRICT</td><td class="col-sep">:</td><td class="back-val">CHAMPHAI</td></tr>
+              <tr><td class="back-lbl">NEAREST POLICE STATION</td><td class="col-sep">:</td><td class="back-val">Champhai PS</td></tr>
+              <tr><td class="back-lbl">NEAREST RLY STN</td><td class="col-sep">:</td><td class="back-val">SAIRANG</td></tr>
+              <tr><td class="back-lbl">STATE</td><td class="col-sep">:</td><td class="back-val">MIZORAM</td></tr>
+              <tr><td class="back-lbl">PIN NO.</td><td class="col-sep">:</td><td class="back-val">796321</td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="valid-red">Valid up to : <span>${c.valid}</span></div>
+            <div class="card-footer">
+              <span></span>
+              <span class="officer-sig">SIG OF ISSUING OFFICER</span>
+            </div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(row);
+    });
+  }
+
+  function clearForm() {
+    document.getElementById("name").value = "";
+    document.getElementById("code").value = "";
+    document.getElementById("father").value = "";
+    document.getElementById("trade").value = "";
+    document.getElementById("dob").value = "";
+    document.getElementById("doe").value = "";
+    document.getElementById("idmark").value = "";
+    document.getElementById("photo").value = "";
+    currentPhotoData = "";
+    updatePreview();
+  }
+</script>
+
+</body>
+</html>

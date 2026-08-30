@@ -1,0 +1,19 @@
+{
+  "name": "icard-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node import.js && node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1",
+    "xlsx": "^0.18.5"
+  }
+}
