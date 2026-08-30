@@ -600,20 +600,7 @@ let employees = [];
 let currentPhotoData = "";
 let cardsQueue = [];
 
-// Case-insensitive & multi-key extractor helper
-function getVal(obj, ...keys) {
-  if (!obj) return '';
-  for (let k of keys) {
-    for (let prop in obj) {
-      if (prop.trim().toLowerCase() === k.toLowerCase() && obj[prop] !== undefined && obj[prop] !== null) {
-        return String(obj[prop]).trim();
-      }
-    }
-  }
-  return '';
-}
-
-// 1. Data load and Dropdown options populate
+// API Data Fetch & Dropdown Population
 window.addEventListener("DOMContentLoaded", () => {
   fetch('/api/employees')
     .then(res => res.json())
@@ -624,10 +611,9 @@ window.addEventListener("DOMContentLoaded", () => {
       dl.innerHTML = "";
 
       employees.forEach(emp => {
-        const name = getVal(emp, 'NAME', 'CPL NAME', 'EMPLOYEE NAME');
-        if (name) {
+        if (emp.name) {
           const opt = document.createElement("option");
-          opt.value = name;
+          opt.value = emp.name;
           dl.appendChild(opt);
         }
       });
@@ -635,25 +621,20 @@ window.addEventListener("DOMContentLoaded", () => {
     .catch(err => console.error("Error fetching data:", err));
 });
 
-// 2. Form Autofill Function (Name select hote hi saara data fill karega)
+// Auto-fill logic
 function onSelectName(val) {
-  const query = val.trim().toLowerCase();
-  const match = employees.find(emp => {
-    const empName = getVal(emp, 'NAME', 'CPL NAME', 'EMPLOYEE NAME').toLowerCase();
-    return empName === query;
-  });
+  const query = val.trim().toUpperCase();
+  const match = employees.find(e => e.name && e.name.trim().toUpperCase() === query);
 
   if (match) {
-    document.getElementById("code").value = getVal(match, 'CODE', 'CODE NO', 'CPL NO');
-    document.getElementById("father").value = getVal(match, 'FNAME', "FATHER'S NAME", "FATHERS NAME", "HUSBAND NAME");
-    document.getElementById("trade").value = getVal(match, 'DESIG', 'TRADE / DESIG', 'DESIGNATION', 'TRADE');
-    document.getElementById("dob").value = getVal(match, 'DOB', 'DATE OF BIRTH');
-    document.getElementById("doe").value = getVal(match, 'DOE', 'DATE OF ENROLMENT', 'DOJ');
-    document.getElementById("idmark").value = getVal(match, 'IDMARK', 'IDENTIFICATION MARK', 'ID MARK');
-
-    const rmplVal = getVal(match, 'RMPL', 'RMPL NO');
-    if (rmplVal) {
-      document.getElementById("rmpl").value = rmplVal;
+    document.getElementById("code").value = match.code || "";
+    document.getElementById("father").value = match.father || "";
+    document.getElementById("trade").value = match.trade || "";
+    document.getElementById("dob").value = match.dob || "";
+    document.getElementById("doe").value = match.doe || "";
+    document.getElementById("idmark").value = match.idmark || "";
+    if (match.rmpl) {
+      document.getElementById("rmpl").value = match.rmpl;
     }
   }
   updatePreview();
@@ -672,15 +653,15 @@ function loadPhoto(e) {
 }
 
 function updatePreview() {
-  document.getElementById("pv-name").innerText = document.getElementById("name").value.toUpperCase();
-  document.getElementById("pv-code").innerText = document.getElementById("code").value.toUpperCase();
-  document.getElementById("pv-father").innerText = document.getElementById("father").value.toUpperCase();
-  document.getElementById("pv-trade").innerText = document.getElementById("trade").value.toUpperCase();
-  document.getElementById("pv-dob").innerText = document.getElementById("dob").value.toUpperCase();
-  document.getElementById("pv-doe").innerText = document.getElementById("doe").value;
-  document.getElementById("pv-idmark").innerText = document.getElementById("idmark").value;
-  document.getElementById("pv-rmpl").innerText = document.getElementById("rmpl").value;
-  document.getElementById("pv-valid").innerText = document.getElementById("valid").value;
+  document.getElementById("pv-name").innerText = (document.getElementById("name").value || "").toUpperCase();
+  document.getElementById("pv-code").innerText = (document.getElementById("code").value || "").toUpperCase();
+  document.getElementById("pv-father").innerText = (document.getElementById("father").value || "").toUpperCase();
+  document.getElementById("pv-trade").innerText = (document.getElementById("trade").value || "").toUpperCase();
+  document.getElementById("pv-dob").innerText = (document.getElementById("dob").value || "").toUpperCase();
+  document.getElementById("pv-doe").innerText = document.getElementById("doe").value || "";
+  document.getElementById("pv-idmark").innerText = document.getElementById("idmark").value || "";
+  document.getElementById("pv-rmpl").innerText = document.getElementById("rmpl").value || "403";
+  document.getElementById("pv-valid").innerText = document.getElementById("valid").value || "28/02/2027";
 
   const box = document.getElementById("pv-photo");
   if (currentPhotoData) {
@@ -718,8 +699,6 @@ function addCard() {
   cardsQueue.push(card);
   renderQueue();
   renderPrintGrid();
-
-  // Reset form and live preview
   clearForm();
 }
 
