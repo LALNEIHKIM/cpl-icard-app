@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node import.js && node server.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -13,7 +13,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.2.1",
-    "sqlite3": "^6.0.1",
     "xlsx": "^0.18.5"
   }
 }
