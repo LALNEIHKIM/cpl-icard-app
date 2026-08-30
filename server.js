@@ -9,17 +9,35 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Date Formatter (Handles Excel Serial & Text Dates like 19-04-1987 or 21-Nov-25)
+// Advanced Excel Date Formatter (Serial Number, Text, Date Object Sabhi Ke Liye)
 function formatExcelDate(value) {
-  if (!value) return '';
-  if (typeof value === 'number') {
-    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-    const d = String(date.getUTCDate()).padStart(2, '0');
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const y = date.getUTCFullYear();
-    return `${d}/${m}/${y}`;
+  if (!value && value !== 0) return '';
+  
+  // Agar pure number (Excel Serial Date) ho
+  if (!isNaN(value) && typeof value !== 'boolean') {
+    const num = Number(value);
+    if (num > 1000) {
+      // Excel epoch fix (1900 leap year bug accounted for)
+      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const y = date.getUTCFullYear();
+      return `${d}/${m}/${y}`;
+    }
   }
-  return String(value).trim();
+
+  // Agar already text/string date format me ho
+  const str = String(value).trim();
+  const parts = str.split(/[-/]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD to DD/MM/YYYY
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+    return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+  }
+
+  return str;
 }
 
 app.get('/api/employees', (req, res) => {
@@ -30,42 +48,38 @@ app.get('/api/employees', (req, res) => {
     // MASTERLIST sheet select karein
     const sheetName = workbook.SheetNames.find(s => s.toUpperCase().includes('MASTER')) || workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const rawData = xlsx.utils.sheet_to_json(sheet, { defval: '' });
 
-    const formattedData = rawData.map(row => {
-      // Keys matching helper
-      const getVal = (...keys) => {
-        for (let k of keys) {
-          for (let prop in row) {
-            const cleanProp = prop.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-            if (cleanProp.includes(k.toLowerCase()) && row[prop] !== '') {
-              return String(row[prop]).trim();
-            }
-          }
-        }
-        return '';
-      };
+    // Array of Arrays read karein (raw values false taaki dates formatted string me milein)
+    const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    const employees = [];
 
-      const name = getVal('name');
-      const code = getVal('code');
-      const trade = getVal('trade');
-      const father = getVal('father', "s/o", 'husband');
-      const dob = formatExcelDate(getVal('birth', 'dob'));
-      const doe = formatExcelDate(getVal('enrolment', 'doe', 'enrol'));
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length === 0) continue;
 
-      return {
-        name,
-        code,
-        trade,
-        father,
-        dob,
-        doe,
-        idmark: '',
-        rmpl: '403'
-      };
-    }).filter(emp => emp.name !== '' && isNaN(emp.name));
+      const code = String(r[1] || '').trim();     // Col B (Code)
+      const trade = String(r[2] || '').trim();    // Col C (Trade)
+      const name = String(r[3] || '').trim();     // Col D (Name)
+      const dobRaw = r[4];                        // Col E (DOB)
+      const father = String(r[5] || '').trim();   // Col F (Father's Name)
+      const doeRaw = r[22];                       // Col W (Date of Enrolment)
 
-    res.json(formattedData);
+      // Agar valid name record hai
+      if (name && !name.toUpperCase().includes('NAME') && isNaN(name)) {
+        employees.push({
+          name: name.toUpperCase(),
+          code: code,
+          trade: trade.toUpperCase(),
+          father: father.toUpperCase(),
+          dob: formatExcelDate(dobRaw),
+          doe: formatExcelDate(doeRaw),
+          idmark: '',
+          rmpl: '403'
+        });
+      }
+    }
+
+    res.json(employees);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
